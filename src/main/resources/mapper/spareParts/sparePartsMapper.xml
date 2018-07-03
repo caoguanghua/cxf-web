@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mes.cxf.dao.SparePartsDao">
+	
+	<resultMap type="com.mes.cxf.bean.SpareParts" id="ResultMap" autoMapping="true">
+		<id column="sp_ID" property="spId"/>
+	</resultMap>
+	<sql id="base_column">
+		sp.sp_ID,sp.spareParts_no,sp.spareName,sp.spareType_Id,sp.createTime,
+		sp.spareCategory_Id,sp.spareModel,sp.spareSpecification,sp.description,sp.cost,
+		sp.minInventory,dic.name as spareTypeName,dic2.name as spareCategoryName,
+		sp.inventoryMonitor,sp.lifeMonitor,
+		SUM(spi.number) inventoryNum,
+		SUM (spi.number)-sp.minInventory remaining
+	</sql>
+	<sql id="base_table">
+		FROM SpareParts sp 
+		LEFT JOIN Sys_Dictionary dic ON sp.spareType_Id=dic.ID  
+		LEFT JOIN Sys_dictionary dic2 ON sp.spareCategory_Id = dic2.ID
+		LEFT JOIN SparePartsInventory spi on sp.sp_ID=spi.spareId
+	</sql>
+	<sql id="base_where">
+		<where>
+			<include refid="base_if"/>
+		</where>
+	</sql>
+	<sql id="base_if">
+		<if test="spareParts.spId !=null and spareParts.spId!='' ">
+			AND sp.sp_ID=#{spareParts.spId}
+		</if>
+		<if test="spareParts.sparePartsNo !=null and spareParts.sparePartsNo!='' ">
+			AND sp.spareParts_no like '%'+#{spareParts.sparePartsNo}+'%'
+		</if>
+		<if test="spareParts.spareName !=null and spareParts.spareName!='' ">
+			AND sp.spareName like '%'+#{spareParts.spareName}+'%'
+		</if>
+	</sql>
+	<select id="getList" resultMap="ResultMap">
+		SELECT <include refid="base_column"/>
+		<include refid="base_table"/>
+		<include refid="base_where"/>
+		GROUP BY
+			sp.sp_ID,
+			sp.spareParts_no,
+			sp.spareName,
+			sp.spareType_Id,
+			sp.createTime,
+			sp.spareCategory_Id,
+			sp.spareModel,
+			sp.spareSpecification,
+			sp.description,
+			sp.cost,
+			sp.minInventory,
+			sp.inventoryMonitor,
+			sp.lifeMonitor,
+			dic.name,
+			dic2.name
+		ORDER BY remaining ASC
+		OFFSET ${(page-1)*rows} ROW FETCH NEXT ${rows}
+		ROWS ONLY
+    </select>
+     <select id="getListCount" resultType="Integer">
+		SELECT
+		COUNT(*)
+		FROM SpareParts sp 
+		<include refid="base_where"/>
+    </select>
+</mapper>
